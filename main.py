@@ -2,11 +2,11 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-import database # Импортируем наш новый файл базы данных
+from sqlalchemy import text  # Нужно для выполнения сырого SQL
+from database import SessionLocal, Player, engine, Base
 
 app = FastAPI()
 
-# Разрешаем нашему WebApp отправлять запросы
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,42 +15,65 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Модель данных, которую присылает игра
-class ScoreData(BaseModel):
-    telegram_id: int
-    username: str
-    score: int
+# АВТО-ОБНОВЛЕНИЕ БАЗЫ ДАННЫХ
+@app.on_event("startup")
+def on_startup():
+    with engine.begin() as conn:
+        try:
+            # Пытаемся добавить колонку nickname (ошибку игнорируем, если уже есть)
+            conn.execute(text("ALTER TABLE game_players ADD COLUMN nickname VARCHAR;"))
+        except:
+            pass
+        try:
+            # Пытаемся добавить колонку coins
+            conn.execute(text("ALTER TABLE game_players ADD COLUMN coins INTEGER DEFAULT 0;"))
+        except:
+            pass
 
-# Функция для получения сессии базы данных
 def get_db():
-    db = database.SessionLocal()
+    db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
 
-@app.get("/")
-def read_root():
-    return {"status": "Бэкенд игры успешно запущен! 🚀"}
+class ScoreData(BaseModel):
+    telegram_id: int
+    username: str
+    score: int
+    coins: int = 0  # Принимаем монеты
+
+class UserData(BaseModel):
+    telegram_id: int
+    username: str
+
+@app.post("/get_user")
+def get_user(data: UserData, db: Session = Depends(get_db)):
+    player = db.query(Player).filter(Player.telegram_id == data.telegram_id).first()
+    if not player:
+        player = Player(telegram_id=data.telegram_id, username=data.username, nickname=data.username)
+        db.add(player)
+        db.commit()
+        db.refresh(player)
+    
+    return {
+        "telegram_id": player.telegram_id,
+        "nickname": player.nickname,
+        "high_score": player.high_score,
+        "coins": player.coins
+    }
 
 @app.post("/save_score")
 def save_score(data: ScoreData, db: Session = Depends(get_db)):
-    # Ищем игрока в базе по его telegram_id
-    player = db.query(database.Player).filter(database.Player.telegram_id == data.telegram_id).first()
-
+    player = db.query(Player).filter(Player.telegram_id == data.telegram_id).first()
     if not player:
-        # Если такого игрока еще нет — создаем нового
-        player = database.Player(telegram_id=data.telegram_id, username=data.username, high_score=data.score)
+        player = Player(telegram_id=data.telegram_id, username=data.username, nickname=data.username)
         db.add(player)
-        message = "Новый игрок зарегистрирован в базе!"
-    else:
-        # Если игрок есть, проверяем, побил ли он свой старый рекорд
-        if data.score > player.high_score:
-            player.high_score = data.score
-            message = "Новый рекорд установлен!"
-        else:
-            message = f"Очки получены, но рекорд ({player.high_score}) не побит."
-
-    # Сохраняем изменения
+    
+    if data.score > player.high_score:
+        player.high_score = data.score
+        
+    player.coins += data.coins  # Сохраняем монеты в банк
     db.commit()
-    return {"message": message, "high_score": player.high_score}
+    
+    return {"message": "Успех", "coins_total": player.coins, "high_score": player.high_score}
