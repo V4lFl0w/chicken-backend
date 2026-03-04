@@ -69,6 +69,10 @@ def save_score(data: ScoreData, db: Session = Depends(get_db)):
     if not player:
         player = Player(telegram_id=data.telegram_id, username=data.username, nickname=data.username)
         db.add(player)
+    # --- ДОБАВЬ ВОТ ЭТИ ДВЕ СТРОЧКИ НИЖЕ ---
+    else:
+        player.nickname = data.username
+    # ---------------------------------------
     
     if data.score > player.high_score:
         player.high_score = data.score
