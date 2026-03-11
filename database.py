@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, Column, Integer, BigInteger, String
+from sqlalchemy import create_engine, Column, Integer, BigInteger, String, JSON
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -20,5 +20,13 @@ class Player(Base):
     nickname = Column(String, nullable=True) # Задел для выбора своего имени
     high_score = Column(Integer, default=0)
     coins = Column(Integer, default=0)       # Банк игрока
+
+# --- НОВАЯ ТАБЛИЦА ДЛЯ ВОПРОСОВ ---
+class QuizQuestion(Base):
+    __tablename__ = "quiz_questions"
+    id = Column(Integer, primary_key=True, index=True)
+    q = Column(String, nullable=False)       # Сам вопрос
+    a = Column(JSON, nullable=False)         # Массив вариантов ответов ["А", "Б", "В", "Г"]
+    c = Column(Integer, nullable=False)      # Индекс правильного ответа (0, 1, 2, 3)
 
 Base.metadata.create_all(bind=engine)
