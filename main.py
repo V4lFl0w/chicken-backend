@@ -60,6 +60,10 @@ async def on_startup():
         except:
             pass
         try:
+            conn.execute(text("ALTER TABLE game_players ADD COLUMN IF NOT EXISTS wins INTEGER DEFAULT 0;"))
+        except:
+            pass
+        try:
             conn.execute(text("UPDATE game_players SET chicken_coins = coins WHERE chicken_coins = 0 AND coins > 0;"))
         except:
             pass
@@ -87,6 +91,10 @@ class UserData(BaseModel):
 class SpinData(BaseModel):
     telegram_id: int
 
+class StatsData(BaseModel):
+    telegram_id: int
+    stat_type: str  # "win" supported
+
 @app.post("/get_user")
 def get_user(data: UserData, db: Session = Depends(get_db)):
     player = db.query(Player).filter(Player.telegram_id == data.telegram_id).first()
@@ -113,6 +121,7 @@ def get_user(data: UserData, db: Session = Depends(get_db)):
         "chicken_coins":    player.chicken_coins    if player.chicken_coins    is not None else 0,
         "golden_feathers":  player.golden_feathers  if player.golden_feathers  is not None else 0,
         "inventory":        player.inventory         if player.inventory         is not None else [],
+        "wins":             player.wins              if player.wins              is not None else 0,
         "can_spin":         can_spin,
         "cooldown_seconds": cooldown_seconds,
     }
@@ -144,6 +153,19 @@ def get_top_players(limit: int = 10, db: Session = Depends(get_db)):
         top_list.append({"nickname": display_name, "score": p.high_score})
         
     return top_list
+
+# --- СТАТИСТИКА ---
+@app.post("/update_stats")
+def update_stats(data: StatsData, db: Session = Depends(get_db)):
+    player = db.query(Player).filter(Player.telegram_id == data.telegram_id).first()
+    if not player:
+        raise HTTPException(status_code=404, detail="Игрок не найден")
+    if data.stat_type == "win":
+        player.wins = (player.wins or 0) + 1
+    else:
+        raise HTTPException(status_code=400, detail=f"Неизвестный stat_type: {data.stat_type}")
+    db.commit()
+    return {"wins": player.wins}
 
 # --- КОЛЕСО ФОРТУНЫ ---
 @app.post("/spin_wheel")

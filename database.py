@@ -24,6 +24,7 @@ class Player(Base):
     golden_feathers = Column(Integer, default=0)   # премиум-валюта (за реал)
     inventory = Column(JSON, default=list)         # список ID купленных скинов/предметов
     last_spin_date = Column(DateTime, nullable=True)  # дата последнего вращения колеса
+    wins = Column(Integer, default=0)               # счётчик побед
 
 # --- НОВАЯ ТАБЛИЦА ДЛЯ ВОПРОСОВ ---
 class QuizQuestion(Base):
