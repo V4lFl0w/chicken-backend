@@ -246,4 +246,4 @@ def api_get_quiz_questions(db: Session = Depends(get_db)):
         
     # Достаем 12 случайных вопросов и отдаем игре
     questions = get_random_questions(limit=12)
-    return questions
+    return questions# re-trigger Tue Apr 21 01:29:35 EEST 2026
