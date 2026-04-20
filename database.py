@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, Column, Integer, BigInteger, String, JSON
+from sqlalchemy import create_engine, Column, Integer, BigInteger, String, JSON, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -17,9 +17,13 @@ class Player(Base):
     id = Column(Integer, primary_key=True, index=True)
     telegram_id = Column(BigInteger, unique=True, index=True)
     username = Column(String, nullable=True)
-    nickname = Column(String, nullable=True) # Задел для выбора своего имени
+    nickname = Column(String, nullable=True)
     high_score = Column(Integer, default=0)
-    coins = Column(Integer, default=0)       # Банк игрока
+    coins = Column(Integer, default=0)             # legacy, mapped to chicken_coins
+    chicken_coins = Column(Integer, default=0)     # основная игровая валюта
+    golden_feathers = Column(Integer, default=0)   # премиум-валюта (за реал)
+    inventory = Column(JSON, default=list)         # список ID купленных скинов/предметов
+    last_spin_date = Column(DateTime, nullable=True)  # дата последнего вращения колеса
 
 # --- НОВАЯ ТАБЛИЦА ДЛЯ ВОПРОСОВ ---
 class QuizQuestion(Base):

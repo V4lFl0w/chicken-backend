@@ -1,6 +1,7 @@
 import asyncio
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+# import socketio  # TODO: pip install python-socketio — нужен для мультиплеера
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import text  # Нужно для выполнения сырого SQL
@@ -27,8 +28,23 @@ async def on_startup():
         except:
             pass
         try:
-            # Пытаемся добавить колонку coins
             conn.execute(text("ALTER TABLE game_players ADD COLUMN coins INTEGER DEFAULT 0;"))
+        except:
+            pass
+        try:
+            conn.execute(text("ALTER TABLE game_players ADD COLUMN IF NOT EXISTS chicken_coins INTEGER DEFAULT 0;"))
+        except:
+            pass
+        try:
+            conn.execute(text("ALTER TABLE game_players ADD COLUMN IF NOT EXISTS golden_feathers INTEGER DEFAULT 0;"))
+        except:
+            pass
+        try:
+            conn.execute(text("ALTER TABLE game_players ADD COLUMN IF NOT EXISTS inventory JSON DEFAULT '[]';"))
+        except:
+            pass
+        try:
+            conn.execute(text("ALTER TABLE game_players ADD COLUMN IF NOT EXISTS last_spin_date TIMESTAMP;"))
         except:
             pass
             
@@ -62,10 +78,13 @@ def get_user(data: UserData, db: Session = Depends(get_db)):
         db.refresh(player)
     
     return {
-        "telegram_id": player.telegram_id,
-        "nickname": player.nickname,
-        "high_score": player.high_score,
-        "coins": player.coins
+        "telegram_id":    player.telegram_id,
+        "nickname":       player.nickname,
+        "high_score":     player.high_score,
+        "coins":          player.coins,
+        "chicken_coins":  player.chicken_coins  if player.chicken_coins  is not None else 0,
+        "golden_feathers":player.golden_feathers if player.golden_feathers is not None else 0,
+        "inventory":      player.inventory       if player.inventory       is not None else [],
     }
 
 @app.post("/save_score")
