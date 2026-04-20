@@ -154,6 +154,13 @@ def get_top_players(limit: int = 10, db: Session = Depends(get_db)):
         
     return top_list
 
+# --- ОДНОРАЗОВАЯ МИГРАЦИЯ (дернуть один раз руками) ---
+@app.get("/force_migrate")
+def force_migrate(db: Session = Depends(get_db)):
+    with engine.begin() as conn:
+        conn.execute(text("UPDATE game_players SET chicken_coins = coins;"))
+    return {"status": "ok", "message": "chicken_coins = coins для всех игроков"}
+
 # --- СТАТИСТИКА ---
 @app.post("/update_stats")
 def update_stats(data: StatsData, db: Session = Depends(get_db)):
