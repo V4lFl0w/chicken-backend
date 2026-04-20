@@ -105,6 +105,10 @@ def get_user(data: UserData, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(player)
     
+    if (player.chicken_coins == 0 or player.chicken_coins is None) and (player.coins or 0) > 0:
+        player.chicken_coins = player.coins
+        db.commit()
+
     display_name = (player.nickname.strip() if player.nickname and player.nickname.strip() else None) or player.username or "Игрок"
     now = datetime.utcnow()
     can_spin = True
