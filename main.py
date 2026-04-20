@@ -47,7 +47,11 @@ async def on_startup():
             conn.execute(text("ALTER TABLE game_players ADD COLUMN IF NOT EXISTS last_spin_date TIMESTAMP;"))
         except:
             pass
-            
+        try:
+            conn.execute(text("UPDATE game_players SET chicken_coins = coins WHERE chicken_coins = 0 AND coins > 0;"))
+        except:
+            pass
+
     # ЗАПУСКАЕМ ФОНОВУЮ ГЕНЕРАЦИЮ ВОПРОСОВ ПРИ СТАРТЕ СЕРВЕРА
     asyncio.create_task(background_fill_bank())
 
@@ -77,9 +81,10 @@ def get_user(data: UserData, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(player)
     
+    display_name = (player.nickname.strip() if player.nickname and player.nickname.strip() else None) or player.username or "Игрок"
     return {
         "telegram_id":    player.telegram_id,
-        "nickname":       player.nickname,
+        "nickname":       display_name,
         "high_score":     player.high_score,
         "coins":          player.coins,
         "chicken_coins":  player.chicken_coins  if player.chicken_coins  is not None else 0,
