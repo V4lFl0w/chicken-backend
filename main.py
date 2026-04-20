@@ -104,6 +104,10 @@ class StatsData(BaseModel):
     telegram_id: int
     stat_type: str  # "win" supported
 
+class ProfileData(BaseModel):
+    telegram_id: int
+    nickname: str
+
 @app.post("/get_user")
 def get_user(data: UserData, db: Session = Depends(get_db)):
     player = db.query(Player).filter(Player.telegram_id == data.telegram_id).first()
@@ -173,6 +177,19 @@ def force_migrate(db: Session = Depends(get_db)):
     with engine.begin() as conn:
         conn.execute(text("UPDATE game_players SET chicken_coins = coins;"))
     return {"status": "ok", "message": "chicken_coins = coins для всех игроков"}
+
+# --- ПРОФИЛЬ ---
+@app.post("/update_profile")
+def update_profile(data: ProfileData, db: Session = Depends(get_db)):
+    nick = data.nickname.strip()
+    if len(nick) < 2 or len(nick) > 20:
+        raise HTTPException(status_code=400, detail="Ник должен быть от 2 до 20 символов")
+    player = db.query(Player).filter(Player.telegram_id == data.telegram_id).first()
+    if not player:
+        raise HTTPException(status_code=404, detail="Игрок не найден")
+    player.nickname = nick
+    db.commit()
+    return {"nickname": player.nickname}
 
 # --- СТАТИСТИКА ---
 @app.post("/update_stats")
