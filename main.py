@@ -1,6 +1,7 @@
 import asyncio
 import random
 from datetime import datetime, timedelta
+# force re-deploy 2026-04-21
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 # import socketio  # TODO: pip install python-socketio — нужен для мультиплеера
