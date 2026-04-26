@@ -49,42 +49,25 @@ def health():
 # АВТО-ОБНОВЛЕНИЕ БАЗЫ ДАННЫХ
 @app.on_event("startup")
 async def on_startup():
-    with engine.begin() as conn:
-        try:
-            # Пытаемся добавить колонку nickname (ошибку игнорируем, если уже есть)
-            conn.execute(text("ALTER TABLE game_players ADD COLUMN nickname VARCHAR;"))
-        except:
-            pass
-        try:
-            conn.execute(text("ALTER TABLE game_players ADD COLUMN coins INTEGER DEFAULT 0;"))
-        except:
-            pass
-        try:
-            conn.execute(text("ALTER TABLE game_players ADD COLUMN IF NOT EXISTS chicken_coins INTEGER DEFAULT 0;"))
-        except:
-            pass
-        try:
-            conn.execute(text("ALTER TABLE game_players ADD COLUMN IF NOT EXISTS golden_feathers INTEGER DEFAULT 0;"))
-        except:
-            pass
-        try:
-            conn.execute(text("ALTER TABLE game_players ADD COLUMN IF NOT EXISTS inventory JSON DEFAULT '[]';"))
-        except:
-            pass
-        try:
-            conn.execute(text("ALTER TABLE game_players ADD COLUMN IF NOT EXISTS last_spin_date TIMESTAMP;"))
-        except:
-            pass
-        try:
-            conn.execute(text("ALTER TABLE game_players ADD COLUMN IF NOT EXISTS wins INTEGER DEFAULT 0;"))
-        except:
-            pass
-        try:
-            conn.execute(text("UPDATE game_players SET chicken_coins = coins WHERE chicken_coins = 0 AND coins > 0;"))
-        except:
-            pass
+    try:
+        with engine.begin() as conn:
+            for stmt in [
+                "ALTER TABLE game_players ADD COLUMN IF NOT EXISTS nickname VARCHAR;",
+                "ALTER TABLE game_players ADD COLUMN IF NOT EXISTS coins INTEGER DEFAULT 0;",
+                "ALTER TABLE game_players ADD COLUMN IF NOT EXISTS chicken_coins INTEGER DEFAULT 0;",
+                "ALTER TABLE game_players ADD COLUMN IF NOT EXISTS golden_feathers INTEGER DEFAULT 0;",
+                "ALTER TABLE game_players ADD COLUMN IF NOT EXISTS inventory JSON DEFAULT '[]';",
+                "ALTER TABLE game_players ADD COLUMN IF NOT EXISTS last_spin_date TIMESTAMP;",
+                "ALTER TABLE game_players ADD COLUMN IF NOT EXISTS wins INTEGER DEFAULT 0;",
+                "UPDATE game_players SET chicken_coins = coins WHERE chicken_coins = 0 AND coins > 0;",
+            ]:
+                try:
+                    conn.execute(text(stmt))
+                except Exception:
+                    pass
+    except Exception:
+        pass  # DB not reachable at startup — migrations will run on first real request
 
-    # ЗАПУСКАЕМ ФОНОВУЮ ГЕНЕРАЦИЮ ВОПРОСОВ ПРИ СТАРТЕ СЕРВЕРА
     asyncio.create_task(background_fill_bank())
 
 def get_db():
