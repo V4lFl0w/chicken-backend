@@ -152,13 +152,14 @@ def save_score(data: ScoreData, db: Session = Depends(get_db)):
     else:
         player.nickname = data.username
     
-    if data.score > player.high_score:
+    if data.score > (player.high_score or 0):
         player.high_score = data.score
-        
-    player.coins += data.coins  # Сохраняем монеты в банк
+
+    player.coins = (player.coins or 0) + data.coins
+    player.chicken_coins = (player.chicken_coins or 0) + data.coins  # hub shows chicken_coins
     db.commit()
-    
-    return {"message": "Успех", "coins_total": player.coins, "high_score": player.high_score}
+
+    return {"message": "Успех", "coins_total": player.chicken_coins, "high_score": player.high_score}
 
 @app.get("/top_players")
 def get_top_players(limit: int = 10, db: Session = Depends(get_db)):
