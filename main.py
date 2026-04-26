@@ -11,13 +11,16 @@ from sqlalchemy import text  # Нужно для выполнения сырог
 from database import SessionLocal, Player, QuizQuestion, engine, Base
 from quiz_manager import background_fill_bank, get_random_questions, MIN_QUESTIONS
 
-# HARD MIGRATION — runs at import time, before any request is served
-with engine.begin() as _m:
-    _m.execute(text("ALTER TABLE game_players ADD COLUMN IF NOT EXISTS chicken_coins INTEGER DEFAULT 0;"))
-    _m.execute(text("ALTER TABLE game_players ADD COLUMN IF NOT EXISTS golden_feathers INTEGER DEFAULT 0;"))
-    _m.execute(text("ALTER TABLE game_players ADD COLUMN IF NOT EXISTS wins INTEGER DEFAULT 0;"))
-    _m.execute(text("ALTER TABLE game_players ADD COLUMN IF NOT EXISTS inventory JSONB DEFAULT '[]';"))
-    _m.execute(text("ALTER TABLE game_players ADD COLUMN IF NOT EXISTS last_spin_date TIMESTAMP;"))
+# HARD MIGRATION — runs at import time; wrapped so a slow DB doesn't crash startup
+try:
+    with engine.begin() as _m:
+        _m.execute(text("ALTER TABLE game_players ADD COLUMN IF NOT EXISTS chicken_coins INTEGER DEFAULT 0;"))
+        _m.execute(text("ALTER TABLE game_players ADD COLUMN IF NOT EXISTS golden_feathers INTEGER DEFAULT 0;"))
+        _m.execute(text("ALTER TABLE game_players ADD COLUMN IF NOT EXISTS wins INTEGER DEFAULT 0;"))
+        _m.execute(text("ALTER TABLE game_players ADD COLUMN IF NOT EXISTS inventory JSONB DEFAULT '[]';"))
+        _m.execute(text("ALTER TABLE game_players ADD COLUMN IF NOT EXISTS last_spin_date TIMESTAMP;"))
+except Exception:
+    pass  # migrations also run inside on_startup with per-statement try-except
 
 WHEEL_PRIZES = [
     {"id": 0, "type": "cc", "amount": 100},
@@ -38,6 +41,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 # АВТО-ОБНОВЛЕНИЕ БАЗЫ ДАННЫХ
 @app.on_event("startup")
